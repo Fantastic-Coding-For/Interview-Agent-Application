@@ -24,28 +24,6 @@ AI 面试训练平台:上传简历即可获得 AI 评分与分析,并支持文�
 | 对象存储 | RustFS(S3 兼容,开发环境) |
 | AI 能力 | 文字对话(SSE 流式)· 实时语音(Qwen3 ASR/TTS)· 向量嵌入(text-embedding-v3) |
 
-## 目录结构
-
-```
-Interview-Agent-Application/
-├── app/                                        # 后端 Spring Boot
-│   ├── src/main/java/.../modules/              # 业务模块
-│   │   ├── resume/                             #   简历分析
-│   │   ├── interview/                          #   文字模拟面试
-│   │   ├── voiceinterview/                     #   实时语音面试
-│   │   ├── knowledgebase/                      #   知识库 RAG
-│   │   ├── interviewschedule/                  #   面试日程
-│   │   └── llmprovider/                        #   LLM Provider 管理
-│   ├── src/main/resources/db/migration/        # Flyway 数据库迁移
-│   └── Dockerfile
-├── Interview-Agent-Application-Frontend/       # 前端 React + Vite
-├── docker/                                     # 中间件编排与初始化脚本
-├── scripts/                                    # 开发脚本
-├── gradle/                                     # Gradle 版本目录与 wrapper
-├── .env.example                                # 环境变量模板(复制为 .env 后填写)
-└── .github/workflows/ci.yml                    # CI(编译 + 测试)
-```
-
 ## 快速开始
 
 ### 前置条件
@@ -116,18 +94,6 @@ pnpm dev
 | RustFS S3 API | 9000 |
 | RustFS 控制台 | 9001 |
 
-## 测试
-
-```bash
-# 后端(根目录)
-gradlew.bat :app:test
-
-# 前端(Interview-Agent-Application-Frontend/)
-pnpm test:e2e          # Playwright 端到端测试
-```
-
 ## 安全提示
 
-- **`.env` 已被 `.gitignore` 排除,严禁提交**,其中含真实 API Key
-- `docker-compose.dev.yml` 中的默认密码(`123456`、`rustfsadmin`)**仅限本地开发**,生产环境务必修改
 - `APP_AI_CONFIG_ENCRYPTION_KEY` 是加密 Provider API Key 的主密钥,设定后永久保持不变,否则已加密的 Key 将无法解密
