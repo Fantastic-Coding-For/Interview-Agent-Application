@@ -1,0 +1,186 @@
+# =============================================================================
+# 本地开发依赖服务
+#
+# 本文件定义了开发环境所需的 PostgreSQL、Redis、RustFS（S3 兼容存储）
+# 三个中间件服务。所有服务通过 Docker Compose 编排，实现一键启停，
+# 且数据通过命名卷持久化，避免容器删除后丢失数据。
+#
+# 环境变量（可缺省，使用默认值）：
+#   - POSTGRES_USER         PostgreSQL 用户名（默认 postgres）
+#   - POSTGRES_PASSWORD     PostgreSQL 密码（默认 123456）
+#   - POSTGRES_DB           PostgreSQL 数据库名（默认 interview_guide）
+#   - RUSTFS_ACCESS_KEY     RustFS 访问密钥（默认 rustfsadmin）
+#   - RUSTFS_SECRET_KEY     RustFS 秘密密钥（默认 rustfsadmin）
+#
+# 用法：
+#   启动服务（后台运行）：
+#     docker compose -f docker-compose.dev.yml --env-file ../.env up -d
+#   停止服务（保留数据）：
+#     docker compose -f docker-compose.dev.yml --env-file ../.env down
+#   彻底清除（删除所有数据卷）：
+#     docker compose -f docker-compose.dev.yml --env-file ../.env down -v
+#   查看运行状态：
+#     docker compose -f docker-compose.dev.yml --env-file ../.env ps
+#   查看日志：
+#     docker compose -f docker-compose.dev.yml --env-file ../.env logs -f [服务名]
+#
+# 注意事项：
+#   - 首次启动 RustFS 后，需访问 http://localhost:9001 并使用
+#     RUSTFS_ACCESS_KEY / RUSTFS_SECRET_KEY 登录，手动创建名为
+#     interview-guide 的 bucket。
+#   - 所有默认密码仅适用于本地开发环境，生产环境请务必修改。
+# =============================================================================
+
+services:
+  # PostgreSQL 16 + pgvector 向量扩展
+  # 用途：关系数据库 + 向量相似度搜索（常用于 AI 应用）
+  postgres:
+    # 显式指定 .env 文件路径，避免只能放在同级目录下
+
+    # 镜像名称：pgvector/pgvector:pg16
+    # - pgvector 是一个 Postgres 扩展，提供向量存储与检索能力
+    # - pg16 表示基于 PostgreSQL 16 版本构建
+    # - 若本地不存在该镜像，Docker 会自动从 Docker Hub 拉取
+    image: pgvector/pgvector:pg16
+
+    # 容器名称：固定为 interview-postgres
+    # - 便于 docker ps、docker exec 等命令直接引用
+    # - 若名称冲突（已有同名容器），需先删除再启动
+    container_name: interview-postgres
+
+    # 环境变量：影响数据库初始化行为
+    # 当容器首次启动且数据目录为空时，PostgreSQL 的启动脚本会读取环境变量并执行对应初始化语句（已有数据则忽略）
+    # - POSTGRES_USER: 数据库超级用户名
+    # - POSTGRES_PASSWORD: 对应用户的密码
+    # - POSTGRES_DB: 初始化阶段要创建的数据库名称
+    # - 语法 ${VAR:-default}：优先从宿主环境或 .env 文件读取，
+    #   若未定义或为空，则使用冒号后的默认值
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-123456}
+      POSTGRES_DB: ${POSTGRES_DB:-interview_guide}
+
+    # 数据卷挂载
+    volumes:
+      # (1) 命名卷 -> 数据目录：持久化数据库文件
+      #   - postgres_data 是在 compose 文件末尾声明的命名卷，由 Docker 管理
+      #   - 挂载到容器内 /var/lib/postgresql/data（PG 默认数据目录）
+      #   - 容器删除后数据不会丢失，除非显式执行 docker compose down -v
+      - postgres_data:/var/lib/postgresql/data
+
+      # (2) 绑定挂载 -> 初始化脚本目录
+      #   - 将主机当前目录下的 ./postgres/init.sql 文件挂载到
+      #     容器内 /docker-entrypoint-initdb.d/init.sql
+      #   - /docker-entrypoint-initdb.d 是 PostgreSQL 官方镜像的初始化脚本入口目录。
+      #     当容器首次启动且数据目录为空时，PostgreSQL 的启动脚本会执行 /docker-entrypoint-initdb.d 目录下所有 .sql、.sh 文件（已有数据则忽略）。
+      #     执行 .sql 文件时，优先连接 POSTGRES_DB 指定的数据库，未指定则连接 postgres 默认库
+      #   - 常用于建表、插入种子数据等初始化操作
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+    # 端口映射：主机端口:容器端口
+    # - 将容器内的 5432（PostgreSQL 默认端口）映射到宿主机的 5432
+    # - 开发时通过 localhost:5432 连接即可
+    ports:
+      - "5432:5432"
+
+    # 健康检查（Docker 引擎自动定时检查）
+    # healthcheck 最核心的调用场景：控制服务启动顺序和依赖。
+    # 例如，可以设置某个应用服务必须等 PostgreSQL 真正准备好才能启动，否则连接失败
+    healthcheck:
+      # 进入该容器中，可以手动输入检查命令：pg_isready -U postgres
+      # - 如果 PostgreSQL 已准备好接受连接，该命令返回 0
+      # - CMD-SHELL 表示以 shell 方式执行命令
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      # 检查间隔：每 5 秒执行一次
+      interval: 5s
+      # 单次检查超时：5 秒内无响应视为失败
+      timeout: 5s
+      # 重试次数：连续失败 5 次后判定为 unhealthy
+      retries: 5
+
+  # Redis 7
+  # 用途：内存缓存 / 分布式锁 / 限流 / 消息队列
+  redis:
+    # 镜像：Redis 7 官方镜像
+    image: redis:7
+
+    # 容器名称
+    container_name: interview-redis
+
+    # 端口映射
+    ports:
+      - "6379:6379"
+
+    # 数据卷：持久化 RDB/AOF 文件
+    # - Redis 容器的默认数据目录为 /data
+    # - 将 redis_data 命名卷挂载到 /data，重启后缓存数据不丢失
+    volumes:
+      - redis_data:/data
+
+    # 健康检查
+    healthcheck:
+      # 检查命令：redis-cli ping
+      # - 返回 PONG 表示服务正常
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # RustFS – 轻量级 S3 兼容对象存储
+  # 用途：替代 AWS S3 / MinIO，用于开发环境存储文件
+  rustfs:
+    # 镜像：RustFS 最新版
+    # - RustFS 是用 Rust 实现的高性能 S3 兼容存储
+    image: rustfs/rustfs:latest
+
+    # 容器名称
+    container_name: interview-rustfs
+
+    # 启动命令：指定数据存放根目录为 /data
+    # - RustFS 默认会在指定的数据存放根目录下存储所有对象
+    command: ["/data"]
+
+    # 环境变量
+    environment:
+      # 访问 ID（Access Key），用于 S3 API 认证
+      # - 默认 rustfsadmin，可通过宿主环境或 .env 覆盖
+      RUSTFS_ACCESS_KEY: ${APP_STORAGE_ACCESS_KEY:-rustfsadmin}
+      # 密钥（Secret Key）
+      # - 默认 rustfsadmin，可通过宿主环境或 .env 覆盖
+      RUSTFS_SECRET_KEY: ${APP_STORAGE_SECRET_KEY:-rustfsadmin}
+      # 启用 Web 管理控制台（监听 9001 端口）
+      # - 设为 "true" 开启，可通过浏览器管理 Bucket 和对象
+      RUSTFS_CONSOLE_ENABLE: "true"
+
+    # 端口映射
+    ports:
+      # S3 API 端口：应用程序通过此端口执行对象存储操作
+      - "9000:9000"
+      # 控制台端口：浏览器访问 http://localhost:9001
+      - "9001:9001"
+
+    # 数据卷：持久化存储的对象数据
+    volumes:
+      - rustfs_data:/data
+
+    # 健康检查
+    healthcheck:
+      # 检查命令：使用镜像自带的 nc 工具探测 9000 端口是否监听
+      # - 注意：RustFS 镜像的 shell 不支持 /dev/tcp，因此使用 nc
+      test: ["CMD", "/usr/bin/nc", "-z", "localhost", "9000"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+# 首次启动后，浏览器访问 http://localhost:9001
+# 使用 RUSTFS_ACCESS_KEY / RUSTFS_SECRET_KEY 登录，手动创建名为 interview-guide 的 bucket
+# 如果项目中已有自动创建 bucket 的逻辑，此步骤可跳过（该项目存在自动创建，会尽力创建但不保证一定成功，所以最好手动创建。）
+
+# 命名卷声明
+# - 所有命名卷由 Docker 自动创建和管理，存储在宿主机的 Docker 数据区域
+# - 容器被删除（docker compose down）时，这些卷会保留
+# - 只有使用 docker compose down -v 才会删除卷及其中数据
+volumes:
+  postgres_data:    # PostgreSQL 数据库文件
+  redis_data:       # Redis 持久化文件（RDB/AOF）
+  rustfs_data:      # RustFS 对象存储数据

@@ -1,0 +1,85 @@
+# ===== Git 元数据 =====
+.git
+../.gitignore
+.gitattributes
+
+# ===== Gradle 构建产物 =====
+.gradle
+**/build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Node.js (Frontend)
+**/node_modules
+**/dist
+**/build
+**/.pnpm-store
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# ===== IDE 配置 =====
+.idea
+.vscode
+*.iml
+*.ipr
+*.iws
+.project
+.classpath
+.settings
+*.swp
+*.swo
+*~
+
+# ===== 环境变量（含敏感密钥）=====
+.env
+.env.local
+
+# Logs & Temporary Files
+*.log
+logs/
+tmp/
+temp/
+test-output.txt
+
+# OS Generated Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Test & Coverage
+**/coverage
+**/.nyc_output
+**/test-results
+
+# Documentation (not needed in production image)
+docs/
+*.md
+!README.md
+
+# Docker (avoid recursive context)
+docker-compose*.yml
+.dockerignore
+Dockerfile*
+
+# CI/CD
+.github
+.gitlab-ci.yml
+.travis.yml
+Jenkinsfile
+
+# Misc
+.editorconfig
+.eslintrc*
+.prettierrc*
+*.bak
+*.tmp
+
+# 项目运行时文件
+app/tem/
+
+# 前端项目
+Interview-Agent-Application-Frontend/

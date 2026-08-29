@@ -1,0 +1,71 @@
+# ============================================================
+# AI Interview Platform — CI Pipeline
+# 工作流用途：每次 Push 或 PR 时自动编译 Java 项目并运行测试
+# 运行环境：GitHub Actions（托管在 ubuntu-latest 虚拟机上）
+# ============================================================
+
+name: CI   # 工作流名称，会显示在 GitHub Actions 的页面中
+
+# -------------------- 触发条件 --------------------
+on:
+  push:                             # 当代码被推送到以下分支时触发
+    branches: [ main, develop ]     # 只有 main 和 develop 分支的推送会触发
+  pull_request:                     # 当创建或更新 Pull Request 时触发
+    branches: [ main ]              # 仅针对目标分支为 main 的 PR
+
+# -------------------- 作业定义 --------------------
+jobs:
+  build:                            # 作业名（可自定义）
+    runs-on: ubuntu-latest          # 运行器环境：使用 GitHub 提供的最新 Ubuntu 虚拟机
+
+    steps:
+      # ---------- Step 1: 拉取仓库代码 ----------
+      - name: Checkout repository                # 步骤显示名称
+        uses: actions/checkout@v4                # 使用官方 checkout action 的 v4 版本
+        # 作用：将仓库代码下载到运行器的当前工作目录
+        # 默认会检出触发当前工作流的那个 commit
+
+      # ---------- Step 2: 安装 JDK 25 ----------
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4              # 使用官方 setup-java action v4
+        with:
+          java-version: '25'                     # 要安装的 Java 版本（与项目 build.gradle 中的 toolchain 保持一致）
+          distribution: 'temurin'                # JDK 发行版：Eclipse Temurin（原 AdoptOpenJDK），免费开源，生产级
+        # 说明：action 会自动下载并配置好 JAVA_HOME 环境变量
+
+      # ---------- Step 3: 缓存 Gradle 依赖 ----------
+      - name: Cache Gradle packages
+        uses: actions/cache@v4                   # 使用官方缓存 action v4
+        with:
+          path: |                                # 要缓存的目录（支持多行）
+            ~/.gradle/caches                     # Gradle 下载的依赖缓存
+            ~/.gradle/wrapper                    # Gradle Wrapper 本身（确保版本一致）
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', '**/libs.versions.toml') }}
+          # 缓存键的构成：
+          #   runner.os：当前运行器的操作系统（如 Linux），避免不同 OS 的缓存混用
+          #   hashFiles(...)：对文件列表计算哈希值，任何文件变化都会导致缓存失效
+          #     文件列表包括：
+          #       **/*.gradle*        —— 所有 Gradle 构建脚本（.gradle, .gradle.kts）
+          #       **/gradle-wrapper.properties —— Gradle Wrapper 配置文件
+          #       **/libs.versions.toml        —— 版本目录文件（集中管理依赖版本）
+          restore-keys: |                        # 当精确 key 未命中时，回退使用的部分匹配键
+            ${{ runner.os }}-gradle-
+          # 回退策略：匹配最新的 "Linux-gradle-" 开头的缓存，即使不是完全一样也能加速构建
+
+      # ---------- Step 4: 赋予 Gradlew 执行权限 ----------
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew                    # 直接在 shell 中执行命令
+        # Gradle Wrapper 脚本 gradlew 默认可能没有可执行权限，尤其在 Windows 上创建的文件
+        # chmod +x 使其可执行，后续 ./gradlew 命令才能正常运行
+
+      # ---------- Step 5: 编译 Java 源码 ----------
+      - name: Compile Java
+        run: ./gradlew :app:compileJava          # 使用 Gradle Wrapper 执行编译任务
+        # :app:compileJava 指定只编译 app 子模块的 Java 源码
+        # 该任务会触发依赖解析和源码编译，但不运行测试
+
+      # ---------- Step 6: 运行单元测试 ----------
+      - name: Run tests
+        run: ./gradlew :app:test                 # 执行 app 模块的测试任务
+        # 会自动编译测试代码并运行所有单元测试
+        # 如果任何测试失败，命令会以非零状态退出，导致该步骤标记为失败

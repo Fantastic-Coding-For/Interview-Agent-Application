@@ -1,0 +1,63 @@
+[versions]
+# Spring Boot：自动配置、起步依赖、可执行 JAR 打包
+spring-boot = "4.1.0"
+# Spring AI：AI 应用开发框架（模型调用、RAG、Agent 编排）
+springAi = "2.0.0"
+
+# Apache Tika：多文档格式解析（PDF、DOCX、TXT → 纯文本）
+tika = "2.9.2"
+# iText：PDF 生成与操作（含报表模板）
+itext = "8.0.5"
+
+# Redisson：Redis 高级客户端（分布式锁、限流、缓存）
+redisson = "4.0.0"
+# AWS SDK for Java：S3 对象存储交互（兼容 S3 协议，可用于 MinIO、RustFS 等）
+aws-sdk = "2.29.51"
+
+# Lombok：编译期代码增强（自动生成 Getter、Setter、构造器）
+lombok = "1.18.46"
+# MapStruct：编译时生成 Entity ↔ DTO 映射实现（类型安全、高性能）
+mapstruct = "1.6.3"
+
+# Pinyin4j：汉字转拼音（支持多种拼音格式）
+pinyin4j = "2.5.0"
+
+# SpringDoc：OpenAPI 3 / Swagger UI 文档自动生成
+springdoc = "3.0.2"
+
+# JUnit Jupiter：Java 单元测试框架（JUnit 5）
+junit-jupiter = "5.12.0"
+
+# Spring AI Agent Utils：Spring AI 社区扩展（结构化输出、Agent 工具）
+springAiAgentUtils = "0.10.0"
+
+
+[libraries]
+# JUnit Jupiter 引擎与 API
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit-jupiter" }
+
+# Lombok 编译时注解处理器（scope: compileOnly + annotationProcessor）
+lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
+
+# Tika Core：文档 MIME 类型检测及基础解析
+tika-core = { module = "org.apache.tika:tika-core", version.ref = "tika" }
+# Tika Parsers：全格式解析包（PDF、DOCX、HTML 等）
+tika-parsers = { module = "org.apache.tika:tika-parsers-standard-package", version.ref = "tika" }
+
+# Pinyin4j：汉字转拼音
+pinyin4j = { module = "com.belerweb:pinyin4j", version.ref = "pinyin4j" }
+
+# SpringDoc OpenAPI Starter：自动生成 Swagger UI 和 OpenAPI 3 文档
+springdoc = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc" }
+
+# Spring AI Agent Utils BOM：统一社区扩展依赖版本（版本由 BOM 管理，此处只声明坐标）
+spring-ai-agent-utils-bom = { module = "org.springaicommunity:spring-ai-agent-utils-bom", version.ref = "springAiAgentUtils" }
+# Spring AI Agent Utils：社区扩展库（结构化输出、Agent 工具）
+spring-ai-agent-utils = { module = "org.springaicommunity:spring-ai-agent-utils" }
+
+
+[plugins]
+# Spring Boot Gradle Plugin：将 Spring Boot 的构建特性注入到项目中
+spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }
+# Spring Dependency Management Plugin：提供一个纯粹的依赖版本管理（BOM 消费）能力，不附带任何构建任务或打包行为
+spring-dependency-management = { id = "io.spring.dependency-management", version = "1.1.7" }

@@ -1,0 +1,81 @@
+# ===== Gradle 构建产物 =====
+HELP.md
+.gradle
+build/
+
+# claude 工作区配置
+/.claude/*
+!/.claude/rules/
+!/.claude/rules/**
+
+# 环境变量
+.env
+.env.local
+# 注释文档
+/docs
+# AI Assistant documentation
+CLAUDE.local.md
+GEMINI.md
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+bin/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
+# IDEA code analysis
+qodana.yaml
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+### VS Code ###
+.vscode/
+
+# ===== macOS =====
+.DS_Store
+
+# ===== 日志文件 =====
+logs/
+*.log
+
+# ===== 系统临时文件 =====
+*.swp
+*.swo
+*~
+test-output.txt
+
+# Playwright MCP
+.playwright-mcp/
+/.agents
+skills-lock.json
+
+# 项目运行时文件
+app/tem/
+
+# ===== 前端项目 =====
+**/node_modules
+**/dist
+**/dist-ssr
+**/coverage
+**/.nyc_output
+**/test-results
+**/playwright-report

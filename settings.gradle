@@ -1,0 +1,78 @@
+import org.gradle.api.initialization.resolve.RepositoriesMode
+
+// 1. pluginManagement：插件仓库配置
+// Gradle 会按照声明的顺序依次查找构件，一旦找到即停止。
+//    此块会在 settings 脚本评估的最早期被处理，用于控制所有插件的
+//    解析仓库、版本策略等。此处主要配置了仓库，以实现国内加速。
+pluginManagement {
+    repositories {
+        // 阿里云 Maven 公共仓库（可解析大部分常见依赖和插件）
+        maven { url = uri('https://maven.aliyun.com/repository/public/') }
+
+        // 阿里云 Gradle 插件专用仓库（镜像 gradlePluginPortal 中的内容）
+        maven { url = uri('https://maven.aliyun.com/repository/gradle-plugin/') }
+
+        // 阿里云 Spring 插件仓库（用于加速 Spring 相关插件的下载）
+        maven { url = uri('https://maven.aliyun.com/repository/spring-plugin/') }
+
+        // 官方 Gradle 插件门户（放在最后作为备用，阿里云镜像优先）
+        gradlePluginPortal()
+    }
+}
+
+// 2. plugins：应用于 Settings 本身（即 Gradle 构建进程）的插件
+//    这里的插件会在初始化阶段被加载，通常用于提供构建基础设施，
+//    而非特定项目的编译、打包等任务。
+plugins {
+    // 应用 foojay 工具链解析插件（版本 1.0.0，之前的版本不兼容 gradle 9.x）
+    // 作用：让 Gradle 能够自动探测、下载并配置所需的 JDK 版本，
+    //       无需手动安装或设置 JAVA_HOME。
+    //       例如当某个任务指定了 Java 版本，Gradle 会自动获取对应 JDK。
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+}
+
+// 3. 根项目名称
+//    设置根项目在构建中的逻辑名称，影响生成的构件名和 IDE 项目名。
+//    注意：在 settings.gradle 执行时，rootProject 只是一个描述符，
+//          真正的 Project 对象在 settings 脚本执行完毕后才会被创建。
+rootProject.name = 'Interview-Agent-Application'
+
+// 4. 声明子项目（模块）
+//    include 方法将指定的目录注册为子项目，Gradle 会为它创建
+//    描述符并建立父子关系。此处将 'app' 目录作为子模块加入构建。
+//    （实际物理目录 'app/' 必须存在，否则构建会失败）
+include('app')
+
+// 依赖仓库配置
+// Gradle 会按照声明的顺序依次查找构件，一旦找到即停止。
+// 将镜像仓库放在最前面，可以优先从国内节点下载，显著提高速度；
+// 官方仓库放在最后，作为可用性保障。
+dependencyResolutionManagement {
+    repositories {
+        // 1. 阿里云 Maven 公共仓库（镜像）
+        //    代理了 Maven Central、JCenter 等公共仓库，加速常见依赖的下载。
+        maven { url = uri('https://maven.aliyun.com/repository/public/') }
+
+        // 2. 阿里云 Spring 专用仓库（镜像）
+        //    代理了 https://repo.spring.io 下的发布版构件，用于加速 Spring
+        //    生态（如 Spring Boot、Spring Cloud）相关依赖的下载。
+        maven { url = uri('https://maven.aliyun.com/repository/spring/') }
+
+        // 3. 阿里云 Gradle 插件专用仓库（镜像）
+        //    代理了 https://plugins.gradle.org/m2/，加速 Gradle 插件的下载。
+        //    注意：此仓库通常用于 pluginManagement 块中，但也可用于普通依赖。
+        maven { url = uri('https://maven.aliyun.com/repository/gradle-plugin/') }
+
+        // 4. Maven 中央仓库（官方）
+        //    最基础的公共构件仓库。当阿里云镜像因同步延迟或缓存失效时，
+        //    可从这里直接获取原始构件，保证构建的可靠性。
+        mavenCentral()
+
+        // 5. Spring 里程碑仓库（官方，预发布版本）
+        //    如果需要使用 Spring 的里程碑版本或候选版本（如 6.1.0-M1），
+        //    必须添加此仓库。正式版本一般不需要，此处保留可支持尝鲜。
+        //    注意：里程碑版本不稳定，生产环境应谨慎使用。
+        maven { url = uri('https://repo.spring.io/milestone') }
+    }
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+}
