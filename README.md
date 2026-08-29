@@ -14,7 +14,7 @@ AI 面试辅助平台：上传简历即可获得 AI 评分与分析；支持文�
 
 ## 技术栈
 
-| 层 | 技术 |
+|  | 技术 |
 |---|---|
 | 后端 | Java 25 · Spring Boot 4.1 · Spring AI 2.0 · Gradle 9.6 · WebSocket · Flyway · Swagger |
 | 前端 | React 18 · TypeScript · Vite 5 · Tailwind CSS 4 · pnpm |
