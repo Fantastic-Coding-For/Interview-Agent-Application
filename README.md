@@ -11,7 +11,6 @@ AI 面试训练平台：上传简历即可获得 AI 评分与分析；支持文�
 | 🎙️ 实时语音面试 | WebSocket 实时语音对话,Qwen3 实时语音识别(ASR)+ 语音合成(TTS),包含自我介绍 / 技术 / 项目 / HR 四个阶段,支持边合成边播放 |
 | 📚 知识库 RAG | 上传资料构建向量知识库(pgvector),支持 AI 检索问答、基于知识库自动出题、AI 面试 |
 | 📅 面试日程管理 | 粘贴 JD 或简历自动解析生成面试日程,日历视图管理 |
-| 🔌 多 LLM Provider | 内置阿里云百炼(DashScope)、DeepSeek、Kimi、GLM、LM Studio,兼容 OpenAI 接口,API Key 经 AES-256-GCM 加密存储,可在界面中动态增删与测试 |
 
 ## 技术栈
 
